@@ -7,6 +7,7 @@ declare namespace Cloudflare {
 		ADMIN_ID: "1";
 		ADMIN_TOKEN: "";
 		CHANNEL_IDS: "[1, 2, 3, 4]";
+		PROXY_REGION: string;
 	}
 }
 interface Env extends Cloudflare.Env {}

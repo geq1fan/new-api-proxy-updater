@@ -39,31 +39,31 @@ async function updateChannelProxy(env: Env, proxyUrl: string): Promise<void> {
   }
 }
 
-export function extractHongKongProxies(markdownText: string): [string, string][] {
-  const proxies: [string, string][] = [];
-  const lines = markdownText.split('\n');
-  const ipPortRegex = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$/;
-
-  for (const line of lines) {
-    // 检查是否为表格数据行
-    if (line.startsWith('|') && !line.startsWith('|---')) {
-      // 分割列并去除首尾空格
-      const columns = line.split('|').map(col => col.trim()).filter(col => col);
-
-      if (columns.length >= 3) {
-        const ipPort = columns[0];
-        const country = columns[1];
-        const user = columns[2];
-
-        // 筛选香港地区且 IP:端口 格式正确的代理
-        if (country === "香港" && ipPortRegex.test(ipPort)) {
-          proxies.push([ ipPort, user ]);
-        }
-      }
-    }
+export function extractProxiesByRegion(markdownText: string, region: string): [string, string][] {
+	const proxies: [string, string][] = [];
+	const lines = markdownText.split('\n');
+	const ipPortRegex = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$/;
+  
+	for (const line of lines) {
+	  // 检查是否为表格数据行
+	  if (line.startsWith('|') && !line.startsWith('|---')) {
+		// 分割列并去除首尾空格
+		const columns = line.split('|').map(col => col.trim()).filter(col => col);
+  
+		if (columns.length >= 3) {
+		  const ipPort = columns[0];
+		  const country = columns[1];
+		  const user = columns[2];
+  
+		  // 筛选指定地区且 IP:端口 格式正确的代理
+		  if (country === region && ipPortRegex.test(ipPort)) {
+			proxies.push([ipPort, user]);
+		  }
+		}
+	  }
+	}
+	return proxies;
   }
-  return proxies;
-}
 
 // Cloudflare Worker 的主入口点
 export default {
@@ -86,13 +86,15 @@ export default {
       const markdownText = await response.text();
       console.log("成功获取代理列表 Markdown 文件。");
 
-      // 步骤 3: 解析 Markdown 并提取香港代理
-      const proxies = extractHongKongProxies(markdownText);
+      // 步骤 3: 解析 Markdown 并根据地区提取代理
+      const region = env.PROXY_REGION || "香港";
+      console.log(`正在查找 ${region} 地区的代理...`);
+      const proxies = extractProxiesByRegion(markdownText, region);
       if (proxies.length === 0) {
-        console.log("在列表中未找到有效的香港代理。任务结束。");
+        console.log(`在列表中未找到有效的 ${region} 代理。任务结束。`);
         return;
       }
-      console.log(`找到了 ${proxies.length} 个香港代理。`);
+      console.log(`找到了 ${proxies.length} 个 ${region} 代理。`);
 
       // 步骤 4: 选择第一个代理并构建代理 URL
       const firstProxy = proxies[0];

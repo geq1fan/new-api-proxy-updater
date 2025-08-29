@@ -10,7 +10,8 @@
 		"BASE_URL": "http://example.com/",
 		"ADMIN_ID": "1",
 		"ADMIN_TOKEN": "123",
-		"CHANNEL_IDS": "[1, 2, 3, 4]"
+		"CHANNEL_IDS": "[1, 2, 3, 4]",
+		"PROXY_REGION": "香港"
 	},
 	"triggers": {
 		"crons": ["*/20 * * * *"]
