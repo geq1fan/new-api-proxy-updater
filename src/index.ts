@@ -5,6 +5,10 @@
  */
 async function updateChannelProxy(env: Env, proxyUrl: string): Promise<void> {
 	let channelIds
+	 console.log(`[DEBUG] updateChannelProxy: proxyUrl=${proxyUrl}`);
+	 console.log(`[DEBUG] updateChannelProxy: env.CHANNEL_IDS=${env.CHANNEL_IDS}`);
+	 console.log(`[DEBUG] updateChannelProxy: env.BASE_URL=${env.BASE_URL}`);
+	 console.log(`[DEBUG] updateChannelProxy: env.ADMIN_ID=${env.ADMIN_ID}`);
   try {
     channelIds = JSON.parse(env.CHANNEL_IDS) as number[];
   } catch (error) {
@@ -18,6 +22,11 @@ async function updateChannelProxy(env: Env, proxyUrl: string): Promise<void> {
       setting: JSON.stringify({ proxy: proxyUrl }),
     };
     console.log(`正在更新渠道 ${id} 的代理...`);
+    console.log(`[DEBUG] updateChannelProxy: updateData=${JSON.stringify(updateData)}`);
+    console.log(`[DEBUG] updateChannelProxy: headers.New-Api-User=${env.ADMIN_ID}`);
+    console.log(`[DEBUG] updateChannelProxy: headers.Authorization=Bearer ${env.ADMIN_TOKEN}`);
+    console.log(`[DEBUG] updateChannelProxy: headers.Content-Type=application/json`);
+    console.log(`[DEBUG] updateChannelProxy: body=${JSON.stringify(updateData)}`);
     const response = await fetch(apiUrl, {
       method: 'PUT',
       headers: {
@@ -33,6 +42,7 @@ async function updateChannelProxy(env: Env, proxyUrl: string): Promise<void> {
     } else {
       const errorText = await response.text();
       console.error(`❌ 代理更新失败：HTTP ${response.status}: ${errorText}`);
+      console.error(`❌ 代理更新失败：HTTP ${response.status}: ${response.statusText}`);
       // 抛出错误以确保外层 catch 能够捕获到
       throw new Error(`代理更新失败：HTTP ${response.status}: ${errorText}`);
     }
