@@ -4,11 +4,15 @@ A worker that can setup a cron job to periodically update the proxy IP for speci
 
 The proxy source: https://github.com/TopChina/proxy-list/blob/main/README.md
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/BHznJNs/new-api-proxy-updater)
+## 新增功能：智能缓存机制与增强代理评估
 
-## 新增功能：增强的代理延迟评估
+本项目已增强了代理延迟评估功能，并新增了智能缓存机制，包括：
 
-本项目已增强了代理延迟评估功能，包括：
+### 🔄 智能缓存机制
+- **自动存储**: 每次成功获取代理列表后自动保存到本地缓存文件
+- **失败回退**: GitHub请求失败时自动使用上次的缓存文件继续执行
+- **连续执行**: 移除MD5检查机制，确保每次都运行完整流程
+- **可靠性提升**: 即使网络中断也能保证任务连续性
 
 ### 📊 多维度统计指标
 - **基础统计**: 平均值、中位数、最值、百分位数（P25, P75, P95, P99）
@@ -26,11 +30,6 @@ The proxy source: https://github.com/TopChina/proxy-list/blob/main/README.md
 - **降级策略**: 自动识别失败场景并使用更可靠的测试方法
 - **错误处理**: 智能判断可恢复错误并采取适当对策
 - **并发优化**: 使用 ThreadPoolExecutor 实现高效并发测试
-
-### 🔧 向后兼容性
-- **API兼容**: 保持与现有 `find_best_proxy_by_latency()` 函数的完全兼容
-- **配置兼容**: 所有现有环境变量继续有效
-- **渐进升级**: 可选择使用增强功能，不影响现有部署
 
 ## 环境变量
 
@@ -130,6 +129,12 @@ export TEST_URLS="http://www.gstatic.com/generate_204,https://httpbin.org/status
 - 多维度统计分析
 - 智能评分算法
 - 高级错误处理和降级策略
+
+### 智能缓存机制
+- 自动保存代理列表到本地缓存文件 (`proxy_list_cache.json`)
+- 网络故障时自动回退到缓存文件确保连续性
+- 移除MD5检查，每次都执行完整流程
+- 提高系统可靠性和容错能力
 
 ## 性能基准
 
