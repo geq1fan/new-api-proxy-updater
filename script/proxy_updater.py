@@ -58,7 +58,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 缓存文件路径
-PROXY_CACHE_FILE = 'proxy_cache.json'
+PROXY_CACHE_FILE = 'proxy_list_cache.json'
 
 
 class TestConfig:
@@ -1172,53 +1172,60 @@ def find_best_proxy_by_latency_enhanced(
     return best_proxy
 
 
-def get_cached_md5() -> Optional[str]:
+
+
+def get_cached_proxy_list() -> Optional[str]:
     """
-    读取缓存的MD5值
+    从缓存文件读取代理列表内容
     
     Returns:
-        Optional[str]: 缓存的MD5值，如果缓存文件不存在或读取失败则返回None
+        Optional[str]: 缓存的代理列表内容，如果缓存文件不存在或读取失败则返回None
     """
     try:
         if os.path.exists(PROXY_CACHE_FILE):
             with open(PROXY_CACHE_FILE, 'r', encoding='utf-8') as f:
                 cache_data = json.load(f)
-                return cache_data.get('last_md5')
+                return cache_data.get('proxy_list_content')
     except (json.JSONDecodeError, IOError) as e:
-        logger.warning(f"读取缓存文件失败: {e}")
+        logger.warning(f"读取代理列表缓存文件失败: {e}")
     return None
 
 
-def save_cached_md5(md5_value: str) -> None:
+def save_proxy_list_cache(content: str) -> None:
     """
-    保存新的MD5值到缓存文件
+    保存代理列表内容到缓存文件
     
     Args:
-        md5_value: 要保存的MD5值
+        content: 要保存的代理列表内容
     """
     try:
         cache_data = {
-            'last_md5': md5_value,
+            'proxy_list_content': content,
             'last_updated': datetime.now().isoformat()
         }
         with open(PROXY_CACHE_FILE, 'w', encoding='utf-8') as f:
             json.dump(cache_data, f, ensure_ascii=False, indent=2)
-        logger.debug(f"已保存MD5缓存: {md5_value}")
+        logger.debug(f"已保存代理列表缓存")
     except IOError as e:
-        logger.warning(f"保存缓存文件失败: {e}")
+        logger.warning(f"保存代理列表缓存文件失败: {e}")
 
 
-def calculate_content_md5(content: str) -> str:
+def load_proxy_list_from_cache() -> str:
     """
-    计算内容的MD5值
-    
-    Args:
-        content: 要计算MD5的内容
+    从缓存加载代理列表作为备用方案
     
     Returns:
-        str: 内容的MD5值
+        str: 从缓存加载的代理列表内容
+        
+    Raises:
+        Exception: 当无法从缓存加载时抛出异常
     """
-    return hashlib.md5(content.encode('utf-8')).hexdigest()
+    cached_content = get_cached_proxy_list()
+    if cached_content:
+        logger.info("🔄 从缓存加载代理列表")
+        return cached_content
+    else:
+        raise Exception("无法从缓存加载代理列表")
 
 
 def test_proxy_connectivity(proxy_ip: str, proxy_port: str, proxy_user: str, proxy_password: str = "1",
@@ -1692,23 +1699,22 @@ def main():
         proxy_list_url = "https://raw.githubusercontent.com/TopChina/proxy-list/refs/heads/main/README.md"
         
         try:
-            response = requests.get(proxy_list_url, timeout=30)
+            response = requests.get(proxy_list_url, timeout=60)
             response.raise_for_status()
             markdown_text = response.text
             logger.info("✅ 成功获取代理列表Markdown文件")
             
-            # 检查内容MD5是否与缓存相同
-            current_md5 = calculate_content_md5(markdown_text)
-            cached_md5 = get_cached_md5()
-            
-            if cached_md5 == current_md5:
-                logger.info("🔄 代理列表内容未变化，跳过本次执行")
-                return
-            else:
-                logger.info("📝 代理列表内容有更新，继续执行")
+            # 保存获取到的代理列表到缓存
+            save_proxy_list_cache(markdown_text)
+            logger.info("📝 已保存代理列表到缓存")
         except requests.RequestException as e:
-            logger.error(f"❌ 获取代理列表失败：{str(e)}")
-            return
+            logger.warning(f"⚠️ 从GitHub获取代理列表失败：{str(e)}")
+            try:
+                # 尝试从缓存加载代理列表
+                markdown_text = load_proxy_list_from_cache()
+            except Exception as cache_error:
+                logger.error(f"❌ 无法从缓存加载代理列表：{str(cache_error)}")
+                return
         
         # 步骤3: 解析代理列表
         region = os.getenv('PROXY_REGION', '香港')
@@ -1771,8 +1777,6 @@ def main():
             proxy_url=proxy_url
         )
         
-        # 保存新的MD5值到缓存
-        save_cached_md5(current_md5)
         logger.info("✅ 代理更新任务完成！")
         
     except json.JSONDecodeError as e:
